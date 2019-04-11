@@ -1,0 +1,42 @@
+version: '2'
+networks:
+  snap-clair-scan-network:
+    driver: "bridge"
+
+services:
+  local-registry:
+    container_name: local_registry
+    image: registry:2
+    restart: always
+    hostname: registry
+    ports:
+      - 5000:5000
+    networks:
+      - snap-clair-scan-network
+
+  postgres:
+    container_name: clair_postgres
+    image: postgres:latest
+    restart: unless-stopped
+    hostname: postgres
+    environment:
+      POSTGRES_PASSWORD: password
+    networks:
+      - snap-clair-scan-network
+
+  clair:
+    container_name: clair_clair
+    image: quay.io/coreos/clair:v2.0.8
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - "6060-6061:6060-6061"
+    links:
+      - postgres
+    volumes:
+      - /tmp:/tmp
+      - ./clair_config:/config
+    networks:
+      - snap-clair-scan-network
+    command: [-config, /config/config.yaml]
